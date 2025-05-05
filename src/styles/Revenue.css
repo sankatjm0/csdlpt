@@ -1,0 +1,61 @@
+.revenue-panel {
+    background-color: #fff;
+    padding: 20px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.revenue-panel h2 {
+    font-size: 28px;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.revenue-panel__month-filter {
+    margin-bottom: 20px;
+}
+
+.revenue-panel__month-filter label {
+    margin-right: 10px;
+    font-size: 16px;
+    color: #333;
+}
+
+.revenue-panel__month-filter select {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 16px;
+}
+
+.revenue-panel__sales-list {
+    padding: 0;
+}
+
+.revenue-panel__sales-list-item {
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.revenue-panel__sales-list-item span {
+    flex: 1;
+}
+
+.revenue-panel__total-revenue {
+    margin-top: 20px;
+    padding: 15px;
+    background-color: #e9f7ef;
+    border: 1px solid #28a745;
+    border-radius: 4px;
+}
+
+.revenue-panel__total-revenue h3 {
+    margin: 0;
+    font-size: 20px;
+    color: #28a745;
+}
