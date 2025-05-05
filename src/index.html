@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Apartment Renting Manager</title>
+  <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.development.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <style>
+    body {
+      background-color: #ffffff;
+      color: #4a4a4a;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    .sidebar {
+      width: 200px;
+      height: 100vh;
+      background-color: #1c1c1c;
+      color: #ffffff;
+      position: fixed;
+      top: 0;
+      left: 0;
+      padding-top: 20px;
+    }
+    .sidebar a {
+      padding: 10px 15px;
+      text-decoration: none;
+      color: #ffffff;
+      display: block;
+    }
+    .sidebar a:hover {
+      background-color: #1c1c1c;
+      color: #6585ba;
+    }
+    .content {
+      margin-left: 220px;
+      padding: 20px;
+    }
+    .table-container {
+      background-color: #f0f0f0;
+      padding: 10px;
+      border-radius: 5px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 10px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+    th {
+      background-color: #e0e0e0;
+    }
+    .add-button {
+      background-color: #6585ba;
+      color: #ffffff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .add-button:hover {
+      background-color: #4a70a0;
+    }
+    .add-button:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+    }
+    .action-button {
+      padding: 5px 10px;
+      margin-right: 5px;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+    .edit-button {
+      background-color: #ffcc00;
+      color: #ffffff;
+    }
+    .delete-button {
+      background-color: #ff4444;
+      color: #ffffff;
+    }
+    .form-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .form-content {
+      background-color: #ffffff;
+      padding: 20px;
+      border-radius: 5px;
+      width: 300px;
+    }
+    .form-content input {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    .form-content button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .cancel-button {
+      background-color: #cccccc;
+      color: #ffffff;
+    }
+    .submit-button {
+      background-color: #6585ba;
+      color: #ffffff;
+    }
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .status-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+    .status-dot.connected {
+      background-color: #4CAF50;
+    }
+    .status-dot.error {
+      background-color: #F44336;
+    }
+    .status-dot.connecting {
+      background-color: #FFC107;
+      animation: blink 1s infinite;
+    }
+    @keyframes blink {
+      0% { opacity: 0.5; }
+      50% { opacity: 1; }
+      100% { opacity: 0.5; }
+    }
+    .retry-button {
+      background-color: #6585ba;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 3px;
+      margin-left: 10px;
+      cursor: pointer;
+    }
+    .error-message {
+      color: #721c24;
+      background-color: #f8d7da;
+      padding: 10px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+      border: 1px solid #f5c6cb;
+    }
+    .empty-message {
+      color: #4a4a4a;
+      text-align: center;
+      margin-bottom: 20px;
+      padding: 20px;
+      background-color: #f8f9fa;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    const formatDate = (dateString) => {
+      if (!dateString) return '';
+      // Xử lý cả trường hợp dateString là đối tượng Date hoặc chuỗi ISO
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return dateString; // Nếu không phải ngày hợp lệ, trả về nguyên chuỗi
+      
+      return date.toLocaleDateString('vi-VN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      });
+    };
+
+    const formatCurrency = (amount) => {
+      if (amount === null || amount === undefined) return '';
+      return new Intl.NumberFormat('vi-VN', {
+        style: 'currency',
+        currency: 'VND',
+        maximumFractionDigits: 0
+      }).format(amount);
+    };
+
+    const Contract = ({ contract, onDelete }) => (
+      <tr>
+        <td>{contract.sale_id}</td>
+        <td>{contract.employee_id}</td>
+        <td>{contract.apartment_id}</td>
+        <td>{contract.customer_name}</td>
+        <td>{formatDate(contract.sale_date)}</td>
+        <td>{contract.duration}</td>
+        <td>{contract.notes || ''}</td>
+        <td>{formatCurrency(contract.amount)}</td>
+        <td>
+          <button className="action-button delete-button" onClick={() => onDelete(contract.sale_id)}>Xóa</button>
+        </td>
+      </tr>
+    );
+
+    const AddContractForm = ({ onClose, onAdd, backendPort }) => {
+      const [formData, setFormData] = useState({
+        employee_id: 101,
+        apartment_id: 201,
+        customer_name: '',
+        sale_date: new Date().toISOString().split('T')[0],
+        duration: 12,
+        notes: '',
+        amount: 0
+      });
+      const [loading, setLoading] = useState(false);
+      const [error, setError] = useState(null);
+
+      const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+      };
+
+      const handleSubmit = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        setError(null);
+        
+        try {
+          const response = await axios.post(`http://localhost:${backendPort}/contracts`, formData);
+          alert(response.data.message);
+          onAdd();
+          onClose();
+        } catch (error) {
+          console.error('Error adding contract:', error);
+          const errorMessage = error.response?.data?.error || error.message;
+          setError(`Không thể thêm hợp đồng: ${errorMessage}`);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      return (
+        <div className="form-overlay">
+          <div className="form-content">
+            <h2 style={{ color: '#4a4a4a', marginBottom: '15px' }}>Thêm hợp đồng</h2>
+            
+            {error && <div className="error-message">{error}</div>}
+            
+            <form onSubmit={handleSubmit}>
+              <div>
+                <label>Mã nhân viên</label>
+                <input 
+                  type="number" 
+                  name="employee_id" 
+                  value={formData.employee_id} 
+                  onChange={handleChange}
+                  required 
+                />
+              </div>
+              <div>
+                <label>Mã căn hộ</label>
+                <input 
+                  type="number" 
+                  name="apartment_id" 
+                  value={formData.apartment_id} 
+                  onChange={handleChange}
+                  required 
+                />
+              </div>
+              <div>
+                <label>Tên khách hàng</label>
+                <input 
+                  type="text" 
+                  name="customer_name" 
+                  value={formData.customer_name} 
+                  onChange={handleChange}
+                  required 
+                />
+              </div>
+              <div>
+                <label>Ngày thuê</label>
+                <input 
+                  type="date" 
+                  name="sale_date" 
+                  value={formData.sale_date} 
+                  onChange={handleChange}
+                  required 
+                />
+              </div>
+              <div>
+                <label>Thời hạn (tháng)</label>
+                <input 
+                  type="number" 
+                  name="duration" 
+                  value={formData.duration} 
+                  onChange={handleChange}
+                  required 
+                />
+              </div>
+              <div>
+                <label>Ghi chú</label>
+                <input 
+                  type="text" 
+                  name="notes" 
+                  value={formData.notes} 
+                  onChange={handleChange} 
+                />
+              </div>
+              <div>
+                <label>Số tiền</label>
+                <input 
+                  type="number" 
+                  step="1000" 
+                  name="amount" 
+                  value={formData.amount} 
+                  onChange={handleChange}
+                  required 
+                />
+              </div>
+              <div style={{ marginTop: '15px', display: 'flex', justifyContent: 'space-between' }}>
+                <button type="button" className="cancel-button" onClick={onClose} disabled={loading}>Hủy</button>
+                <button type="submit" className="submit-button" disabled={loading}>
+                  {loading ? 'Đang xử lý...' : 'Thêm'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      );
+    };
+
+    const App = () => {
+      const [contracts, setContracts] = useState([]);
+      const [showForm, setShowForm] = useState(false);
+      const [error, setError] = useState(null);
+      const [backendPort, setBackendPort] = useState(null);
+      const [connectionStatus, setConnectionStatus] = useState('connecting'); // 'connecting', 'connected', 'error'
+      const [loading, setLoading] = useState(true);
+
+      const checkBackendHealth = async (port) => {
+        try {
+          const response = await axios.get(`http://localhost:${port}/health`, { timeout: 3000 });
+          console.log('Backend health check:', response.data);
+          
+          // Kiểm tra kết nối database
+          if (!response.data.databaseConnected) {
+            return { 
+              port, 
+              status: false, 
+              error: "Không thể kết nối đến cơ sở dữ liệu. Vui lòng kiểm tra cấu hình kết nối SQL Server." 
+            };
+          }
+          
+          return { port, status: true, data: response.data };
+        } catch (error) {
+          console.error(`Health check failed on port ${port}:`, error.message);
+          return { port, status: false, error: `Không thể kết nối đến backend trên cổng ${port}` };
+        }
+      };
+
+      const fetchContracts = async (port) => {
+        try {
+          setLoading(true);
+          const response = await axios.get(`http://localhost:${port}/contracts`, { timeout: 5000 });
+          setContracts(response.data);
+          setBackendPort(port);
+          setError(null);
+          setConnectionStatus('connected');
+          return true;
+        } catch (error) {
+          console.error(`Error fetching contracts on port ${port}:`, error);
+          const errorMessage = error.response?.data?.error || error.message;
+          throw new Error(errorMessage);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      const initializeApp = async () => {
+        setConnectionStatus('connecting');
+        setLoading(true);
+        const ports = [5500, 5501];
+        let activePort = null;
+        let connectionError = "Không thể kết nối với backend.";
+
+        for (const port of ports) {
+          const healthCheck = await checkBackendHealth(port);
+          if (healthCheck.status) {
+            activePort = port;
+            break;
+          } else if (healthCheck.error) {
+            connectionError = healthCheck.error;
+          }
+        }
+
+        if (!activePort) {
+          setConnectionStatus('error');
+          setError(connectionError);
+          setContracts([]);
+          setLoading(false);
+          return;
+        }
+
+        try {
+          await fetchContracts(activePort);
+        } catch (error) {
+          setConnectionStatus('error');
+          setError(`Không thể lấy dữ liệu từ backend: ${error.message}`);
+          setContracts([]);
+          setLoading(false);
+        }
+      };
+
+      useEffect(() => {
+        initializeApp();
+      }, []);
+
+      const handleDelete = async (sale_id) => {
+        if (!backendPort) {
+          setError('Không thể thực hiện hành động vì chưa kết nối được với backend.');
+          return;
+        }
+        
+        if (!confirm('Bạn có chắc chắn muốn xóa hợp đồng này?')) {
+          return;
+        }
+        
+        try {
+          const response = await axios.delete(`http://localhost:${backendPort}/contracts/${sale_id}`);
+          alert(response.data.message);
+          await fetchContracts(backendPort);
+        } catch (error) {
+          console.error('Error deleting contract:', error);
+          const errorMessage = error.response?.data?.error || error.message;
+          setError(`Không thể xóa hợp đồng: ${errorMessage}`);
+        }
+      };
+
+      const handleAdd = async () => {
+        if (!backendPort) {
+          setError('Không thể thực hiện hành động vì chưa kết nối được với backend.');
+          return;
+        }
+        await fetchContracts(backendPort);
+      };
+
+      return (
+        <div>
+          <div className="sidebar">
+            <a href="#" style={{ fontWeight: 'bold', fontSize: '18px', marginBottom: '20px' }}>Quản lý căn hộ</a>
+            <a href="#">Tổng quan</a>
+            <a href="#" style={{ backgroundColor: '#333' }}>Hợp đồng</a>
+            <a href="#">Căn hộ</a>
+            <a href="#">Nhân viên</a>
+          </div>
+          <div className="content">
+            <h1 style={{ color: '#4a4a4a', fontSize: '24px', marginBottom: '20px' }}>Quản lý hợp đồng thuê căn hộ</h1>
+            
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <button 
+                className="add-button" 
+                onClick={() => setShowForm(true)} 
+                disabled={connectionStatus !== 'connected'}
+              >
+                <span style={{ marginRight: '5px' }}>+</span> Thêm hợp đồng
+              </button>
+              
+              <div className="status-indicator">
+                <div className={`status-dot ${connectionStatus}`}></div>
+                <span>
+                  {connectionStatus === 'connected' && 'Đã kết nối với server'}
+                  {connectionStatus === 'connecting' && 'Đang kết nối với server...'}
+                  {connectionStatus === 'error' && 'Không thể kết nối với server'}
+                </span>
+                {connectionStatus === 'error' && (
+                  <button className="retry-button" onClick={initializeApp}>Thử lại</button>
+                )}
+              </div>
+            </div>
+            
+            {error && <div className="error-message"><strong>Lỗi:</strong> {error}</div>}
+            
+            {loading ? (
+              <div className="empty-message">Đang tải dữ liệu...</div>
+            ) : contracts.length === 0 ? (
+              <div className="empty-message">
+                {connectionStatus === 'connected' 
+                  ? 'Không có dữ liệu hợp đồng trong cơ sở dữ liệu.' 
+                  : 'Không thể hiển thị dữ liệu do lỗi kết nối.'}
+              </div>
+            ) : (
+              <div className="table-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Mã hợp đồng</th>
+                      <th>Mã nhân viên</th>
+                      <th>Mã căn hộ</th>
+                      <th>Tên khách hàng</th>
+                      <th>Ngày thuê</th>
+                      <th>Thời hạn</th>
+                      <th>Ghi chú</th>
+                      <th>Số tiền</th>
+                      <th>Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {contracts.map(contract => (
+                      <Contract key={contract.sale_id} contract={contract} onDelete={handleDelete} />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            
+            {showForm && <AddContractForm onClose={() => setShowForm(false)} onAdd={handleAdd} backendPort={backendPort} />}
+          </div>
+        </div>
+      );
+    };
+
+    ReactDOM.render(<App />, document.getElementById('root'));
+  </script>
+</body>
+</html>
